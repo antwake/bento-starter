@@ -12,7 +12,7 @@ const chalk = require('chalk')
 const util = require('util')
 const exec = util.promisify(require('child_process').exec)
 
-const npmConfig = require('./helpers/get-npm-config')
+const nodeVersionHelper = require('./helpers/node-version-helper')
 
 process.stdin.resume()
 process.stdin.setEncoding('utf8')
@@ -168,55 +168,57 @@ async function cleanCurrentRepository() {
 
 /**
  * Check Node.js version
- * @param {!number} minimalNodeVersion
  * @returns {Promise<any>}
  */
-async function checkNodeVersion(minimalNodeVersion) {
+async function checkNodeVersion() {
   const spinner = ora('Checking node version').start()
+  let compatibilityInfo
 
-  let nodeVersion
   try {
-    const { stdout } = await exec('node --version')
-    nodeVersion = stdout.trim()
+    compatibilityInfo = await nodeVersionHelper.getNodeVersionCompatibilityInfo()
   } catch (err) {
     spinner.fail(`node version check failed\n${err}`)
     throw new Error(err)
   }
 
-  if (compareVersions(nodeVersion, minimalNodeVersion) === -1) {
-    spinner.fail(
-      `You need Node.js v${minimalNodeVersion} or above but you have v${nodeVersion}`
-    )
-    throw new Error()
-  }
-
-  spinner.succeed(`Node version ${nodeVersion} OK`)
+  checkVersionCompatibility('node', spinner, compatibilityInfo)
 }
 
 /**
  * Check NPM version
- * @param {!number} minimalNpmVersion
  * @returns {Promise<any>}
  */
-async function checkNpmVersion(minimalNpmVersion) {
+async function checkNpmVersion() {
   const spinner = ora('Checking npm version').start()
-  let npmVersion
+  let compatibilityInfo
+
   try {
-    const { stdout } = await exec('npm --version')
-    npmVersion = stdout.trim()
+    compatibilityInfo = await nodeVersionHelper.getNpmVersionCompatibilityInfo()
   } catch (err) {
     spinner.fail(`npm version check failed\n${err}`)
     throw new Error(err)
   }
 
-  if (compareVersions(npmVersion, minimalNpmVersion) === -1) {
+  checkVersionCompatibility('npm', spinner, compatibilityInfo)
+}
+
+/**
+ * Display result of compatibility check
+ * @param {String} label
+ * @param {ora.Ora} spinner
+ * @param {{currentVersion: String, requiredVersion: String, isCompatible: Boolean}} compatibilityInfo
+ */
+async function checkVersionCompatibility(label, spinner, compatibilityInfo) {
+  if (!compatibilityInfo.isCompatible) {
     spinner.fail(
-      `You need NPM v${minimalNpmVersion} or above but you have v${npmVersion}`
+      `You need ${label} v${
+        compatibilityInfo.requiredVersion
+      } or above but you have v${compatibilityInfo.currentVersion}`
     )
     throw new Error()
   }
 
-  spinner.succeed(`npm version ${npmVersion} OK`)
+  spinner.succeed(`${label} version ${compatibilityInfo.currentVersion} OK`)
 }
 
 /**
@@ -306,17 +308,8 @@ function onError(e) {
 ;(async () => {
   const repoRemoved = await cleanCurrentRepository()
 
-  // Take the required Node and NPM version from package.json
-  const {
-    engines: { node, npm }
-  } = npmConfig
-
-  const requiredNodeVersion = node.match(/([0-9.]+)/g)[0]
-  await checkNodeVersion(requiredNodeVersion).catch(onError)
-
-  const requiredNpmVersion = npm.match(/([0-9.]+)/g)[0]
-  await checkNpmVersion(requiredNpmVersion).catch(onError)
-
+  await checkNodeVersion().catch(onError)
+  await checkNpmVersion().catch(onError)
   await deleteCurrentDir().catch(onError)
   await removeScriptDependencies().catch(onError)
   await removeSetupScript().catch(onError)
