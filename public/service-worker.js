@@ -1,4 +1,4 @@
-workbox.core.setCacheNameDetails({ prefix: 'bento-starter' })
+workbox.core.setCacheNameDetails({ prefix: 'epicerie' })
 
 /**
  * The workboxSW.precacheAndRoute() method efficiently caches and responds to
