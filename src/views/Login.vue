@@ -38,7 +38,7 @@ export default {
     meta: [
       {
         name: 'description',
-        content: 'Sign in or sign up to bento-starter',
+        content: 'Sign in or sign up to epicerie',
         id: 'desc'
       }
     ]
@@ -52,7 +52,7 @@ export default {
       handler(user) {
         if (!isNil(user)) {
           const redirectUrl = isNil(this.$route.query.redirectUrl)
-            ? '/products'
+            ? '/articles'
             : this.$route.query.redirectUrl
           this.$router.push(redirectUrl)
         }

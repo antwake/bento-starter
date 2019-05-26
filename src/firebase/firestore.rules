@@ -14,5 +14,12 @@ service cloud.firestore {
       allow create: if authenticated() && request.auth.uid == userId;
       allow update, delete: if authenticated() && request.auth.uid == userId;
     }
+    // Now connected users will be able to read and create news.
+    match /articles/{articlesId} {
+      allow get: if authenticated();
+      allow list: if authenticated();
+      allow create: if authenticated();
+      allow update, delete: if authenticated();
+    }
   }
 }
